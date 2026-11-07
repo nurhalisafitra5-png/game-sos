@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOS Matematika — Game Online Lingkaran</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #203052;
+  --purple: #6c4be8;
+  --pink: #ff5f9e;
+  --yellow: #ffd84d;
+  --mint: #4bd8b0;
+  --blue: #56b9ff;
+  --bg: #f4f7ff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background: radial-gradient(circle at 8% 8%, #fff0b8 0 8%, transparent 24%), radial-gradient(circle at 92% 5%, #d8f8f0 0 10%, transparent 25%), var(--bg);
+  color: var(--ink);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+button, input, select { font: inherit; }
+button { cursor: pointer; border: 0; font-weight: 800; transition: transform 0.15s, filter 0.15s; }
+button:hover { filter: brightness(1.04); transform: translateY(-1px); }
+
+.screen { min-height: 100vh; padding: 20px; display: flex; align-items: center; justify-content: center; overflow-y: auto; }
+.panel { width: min(900px, 100%); background: #ffffffeb; border: 2px solid white; border-radius: 30px; box-shadow: 0 20px 70px #35416a1c; padding: clamp(20px, 4vw, 40px); }
+h1 { font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1; margin: 10px 0; }
+h1 em { font-style: normal; color: var(--purple); }
+.eyebrow { display: inline-flex; gap: 8px; align-items: center; background: #eee9ff; color: #6542d8; padding: 6px 12px; border-radius: 99px; font-weight: 900; font-size: 0.8rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+.card-mode { background: #f8f9ff; border: 2px solid #e2e7f8; border-radius: 20px; padding: 20px; text-align: center; }
+.card-mode h3 { margin: 0 0 10px; color: var(--purple); }
+.primary { background: var(--purple); color: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 4px 0 #4b31b8; width: 100%; font-size: 1rem; margin-top: 10px; }
+.secondary { background: #f0f2fa; color: #505b78; padding: 12px 20px; border-radius: 12px; width: 100%; margin-top: 8px; }
+input, select { width: 100%; border: 2px solid #e7e9f4; border-radius: 12px; padding: 12px; outline: none; margin-bottom: 10px; text-align: center; font-size: 1.1rem; font-weight: bold; background: white; }
+input:focus, select:focus { border-color: var(--purple); }
+
+/* BOARD LAYOUT FOR SERVER (STRICT 100VH NO SCROLL) */
+#game {
+  display: none;
+  width: 100vw;
+  height: 100vh;
+  padding: 12px;
+  background: linear-gradient(140deg, #fff6d2, #e9f7ff 50%, #f8e9ff);
+  overflow: hidden;
+}
+
+.game-shell {
+  width: 100%;
+  height: 100%;
+  max-width: 1800px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: white;
+  padding: 8px 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px #34446a0a;
+  height: 54px;
+  flex-shrink: 0;
+}
+
+.room-badge { background: var(--pink); color: white; padding: 4px 14px; border-radius: 99px; font-weight: 900; font-size: 1.1rem; }
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.board-wrap {
+  background: #ffffffdf;
+  border: 2px solid white;
+  border-radius: 22px;
+  padding: 12px;
+  box-shadow: 0 12px 30px #34446a12;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 0;
+}
+
+.board {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.cell {
+  position: relative;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #fff, #f0f5ff);
+  border: 2px solid #dce4f7;
+  color: #203052;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+  padding: 2px 4px;
+}
+
+.cell .num { 
+  position: absolute; 
+  top: 2px; 
+  left: 4px; 
+  font-size: clamp(0.55rem, 0.7vw, 0.75rem); 
+  color: #808ba0; 
+  font-weight: 900; 
+  z-index: 2; 
+  line-height: 1;
+}
+
+.cell .topic {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 850;
+  line-height: 1.15;
+  padding: 12px 2px 2px 2px;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  text-overflow: clip;
+}
+
+.board-6x6 .cell .topic { font-size: clamp(0.75rem, 1.1vw, 1.35rem); }
+.board-6x9 .cell .topic { font-size: clamp(0.65rem, 0.9vw, 1.1rem); }
+.board-9x9 .cell .topic { font-size: clamp(0.5rem, 0.7vw, 0.85rem); }
+
+.cell .state { font-size: clamp(1.8rem, 3vw, 4rem); font-weight: 1000; line-height: 1; margin: auto; }
+.cell .owner-tag { font-size: 0.65rem; font-weight: 900; opacity: 0.9; max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+.cell.used { background: #f0edff; box-shadow: inset 0 0 0 3px var(--owner-color, #b3a3ff); color: var(--owner-color, #6749d6); cursor: not-allowed; }
+
+.sos-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.sos-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawLine 0.6s ease-out forwards;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.25));
+}
+
+@keyframes drawLine {
+  to { stroke-dashoffset: 0; }
+}
+
+.side-card {
+  background: #ffffffdf;
+  border: 2px solid white;
+  border-radius: 22px;
+  padding: 14px;
+  box-shadow: 0 12px 30px #34446a12;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.scores-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; }
+.score-row { display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: center; padding: 8px 12px; background: #f7f8ff; border-radius: 12px; border: 1px solid #e2e8f8; }
+.swatch { width: 10px; height: 32px; border-radius: 99px; }
+
+/* MOBILE CONTROLLER UI */
+#mobileView { display: none; padding: 15px; max-width: 600px; margin: auto; height: 100vh; overflow-y: auto; }
+.m-card { background: white; padding: 16px; border-radius: 20px; box-shadow: 0 10px 30px #0001; margin-bottom: 12px; text-align: center; }
+.m-grid-container { position: relative; width: 100%; }
+.m-grid { display: grid; gap: 4px; width: 100%; }
+.m-cell { padding: 8px 0; border-radius: 8px; font-weight: bold; background: #f0f2fa; color: #445; border: 2px solid #e0e4f0; min-height: 40px; font-size: 0.85rem; }
+.m-cell:disabled { opacity: 0.6; cursor: not-allowed; }
+.m-cell.done { background: #f0edff; color: var(--owner-color, #6749d6); border-color: var(--owner-color, #b3a3ff); cursor: not-allowed; font-size: 1.1rem; font-weight: 900; opacity: 1; }
+
+.diagram svg { width: min(280px, 100%); height: auto; margin: 10px auto; display: block; }
+.letter-choice { flex: 1; padding: 20px; border-radius: 15px; font-size: 2rem; color: white; font-weight: 900; }
+.letter-choice.s { background: var(--pink); box-shadow: 0 5px 0 #d83f7c; }
+.letter-choice.o { background: var(--blue); box-shadow: 0 5px 0 #328bce; }
+
+.modal-backdrop { display: none; position: fixed; inset: 0; background: #202947a8; z-index: 100; align-items: center; justify-content: center; padding: 15px; }
+.modal { width: min(550px, 100%); background: white; border-radius: 25px; padding: 25px; box-shadow: 0 25px 80px #17204455; max-height: 90vh; overflow-y: auto; }
+
+/* ANIMATED SOS TOAST NOTIFICATION */
+#sosToast {
+  position: fixed;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: linear-gradient(135deg, var(--pink), var(--purple));
+  color: white;
+  padding: 12px 28px;
+  border-radius: 99px;
+  font-weight: 900;
+  font-size: 1.1rem;
+  box-shadow: 0 12px 35px rgba(236, 72, 153, 0.4);
+  z-index: 200;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#sosToast.show { transform: translateX(-50%) translateY(0); }
+
+/* GAMEOVER PODIUM MODAL STYLING */
+.podium-stage {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  margin: 25px 0 15px 0;
+  height: 200px;
+}
+.podium-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  border-radius: 16px 16px 8px 8px;
+  padding: 10px 6px;
+  color: white;
+  font-weight: 800;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+.podium-1 { height: 100%; width: 32%; background: linear-gradient(180deg, #ffd700, #ffa500); border: 3px solid #fff; z-index: 3; }
+.podium-2 { height: 75%; width: 30%; background: linear-gradient(180deg, #c0c0c0, #95a5a6); border: 3px solid #fff; z-index: 2; }
+.podium-3 { height: 58%; width: 30%; background: linear-gradient(180deg, #cd7f32, #a0522d); border: 3px solid #fff; z-index: 1; }
+.trophy-icon { font-size: 2.2rem; position: absolute; top: -42px; animation: bounceTrophy 1.2s infinite alternate ease-in-out; }
+@keyframes bounceTrophy { 0% { transform: translateY(0); } 100% { transform: translateY(-8px); } }
+
+.pause-banner {
+  background: #ffea79; color: #8a6400; font-weight: 900; font-size: 0.85rem; padding: 6px 14px; border-radius: 99px; display: none; align-items: center; gap: 6px;
+}
+
+@media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- AUDIO ELEMENT BGM MENGGUNAKAN URL GITHUB -->
+<audio id="bgmPlayer" loop preload="auto" crossorigin="anonymous">
+  <source src="https://raw.githubusercontent.com/nurhalisafitrasari-afk/audio-game-sos/refs/heads/main/WhatsApp%20Audio%202026-10-27%20at%2017.33.45.mpeg.mp3" type="audio/mpeg">
+</audio>
+
+<!-- TOAST SOS ANNOUNCEMENT -->
+<div id="sosToast">
+  <span>🎉</span> <span id="toastMsg">S-O-S TERBENTUK! +5 PTS</span>
+</div>
+
+<!-- SCREEN 1: LOBBY -->
+<section id="start" class="screen">
+ <div class="panel">
+  <div class="eyebrow"><span>✦</span> GAME ONLINE SOS MATEMATIKA</div>
+  <h1>Misi <em>SOS</em> Lingkaran</h1>
+  <p style="color:#5a6681">Satu Layar Server (Proyektor), dan seluruh siswa dapat bergabung langsung mengisi jawaban dari HP masing-masing tanpa batas pemain!</p>
+
+  <div class="grid-2">
+   <!-- CARD HOST (SERVER) -->
+   <div class="card-mode">
+    <h3>🖥️ Tampilkan Server (Host)</h3>
+    <p style="font-size:0.85rem;color:#667;margin-bottom:8px">Pilih Ukuran Kotak Papan Game:</p>
+    <select id="boardSizeSelect">
+      <option value="6x6">6 × 6 (36 Soal)</option>
+      <option value="6x9">6 × 9 (54 Soal)</option>
+      <option value="9x9">9 × 9 (81 Soal)</option>
+    </select>
+    <button class="primary" id="hostBtn">Buat Ruang Baru</button>
+   </div>
+
+   <!-- CARD JOIN (HP PEMAIN) -->
+   <div class="card-mode">
+    <h3>📱 Gabung Permainan (Siswa)</h3>
+    <input id="joinRoomCode" placeholder="Kode Room 6 Digit" maxlength="6">
+    <input id="playerName" placeholder="Nama Lengkap Anda" maxlength="20">
+    <button class="primary" style="background:var(--mint);box-shadow:0 4px 0 #20b58d" id="joinBtn">Masuk Permainan</button>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- SCREEN 2: LAYAR UTAMA SERVER / HOST -->
+<section id="game">
+ <div class="game-shell">
+  <div class="topbar">
+   <div style="font-size:1.1rem;font-weight:900;display:flex;align-items:center;gap:10px">
+     <button id="backToLobbyBtn" style="background:#f0f2fa;color:#505b78;padding:6px 14px;border-radius:10px;font-size:0.85rem;font-weight:800">⬅ Kembali</button>
+     <span>✦ SOS Lingkaran <span style="color:var(--purple)">Server</span></span>
+     <button id="pauseGameBtn" style="background:#fff3c4;color:#9e7600;padding:6px 14px;border-radius:10px;font-size:0.85rem;font-weight:800">⏸️ Pause</button>
+     <button id="bgmToggle" style="background:#eee9ff;color:var(--purple);padding:4px 12px;border-radius:99px;font-size:0.8rem">🎵 Musik: OFF</button>
+   </div>
+   <div style="display:flex;gap:10px;align-items:center">
+     <div id="hostPauseBanner" class="pause-banner">⏸️ PERMAINAN DIPAUSE</div>
+     <div style="font-weight:bold;font-size:0.9rem">KODE ROOM:</div>
+     <div class="room-badge" id="roomDisplay">------</div>
+   </div>
+  </div>
+
+  <div class="layout">
+   <div class="board-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="margin:0;font-size:1rem;font-weight:800" id="boardTitleDisplay">Papan Tantangan</h3>
+      <span style="font-weight:bold;color:var(--purple);font-size:0.9rem" id="remCount">Soal Tersisa</span>
+    </div>
+    <div class="board" id="board"></div>
+    <svg id="sosSvgCanvasHost" class="sos-canvas"></svg>
+   </div>
+
+   <div class="side-card">
+    <h3 style="margin-top:0;margin-bottom:10px;font-size:1rem;font-weight:800">🏆 Papan Skor & Pemain</h3>
+    <div id="scoresHost" class="scores-container"></div>
+    <hr style="border:0;border-top:1px solid #eee;margin:10px 0">
+    <div style="font-size:0.75rem;color:#778;line-height:1.4">
+      <b>Aturan Poin:</b><br>
+      • Jawab Benar: <b style="color:var(--mint)">+10 Pts</b><br>
+      • Membentuk Pola S-O-S: <b style="color:var(--pink)">+5 Pts Bonus</b>
+    </div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- SCREEN 3: LAYAR HP PEMAIN (CONTROLLER & REALTIME SCORES) -->
+<section id="mobileView">
+  <div class="m-card" style="display:flex;justify-content:space-between;align-items:center;">
+    <div style="text-align:left">
+      <h3 id="mPlayerName" style="margin:0;color:var(--purple);font-size:1.1rem;font-weight:900">Pemain</h3>
+      <span id="mStatusSub" style="font-size:0.75rem;color:#667">Pilih kotak aktif untuk menjawab</span>
+    </div>
+    <div style="background:var(--pink);color:white;padding:6px 14px;border-radius:99px;font-weight:900;font-size:0.9rem" id="mScore">0 Pts</div>
+  </div>
+
+  <div id="mobilePauseBanner" class="m-card" style="display:none; background:#fff3c4; color:#856404; font-weight:900;">
+    ⏸️ Guru sedang menghentikan permainan sementara...
+  </div>
+
+  <div class="m-card">
+    <h4 style="margin-top:0;margin-bottom:10px;font-size:0.9rem;color:#505b78">Papan Permainan:</h4>
+    <div class="m-grid-container">
+      <div class="m-grid" id="mCellSelect"></div>
+      <svg id="sosSvgCanvasMobile" class="sos-canvas"></svg>
+    </div>
+  </div>
+
+  <div class="m-card" style="text-align:left">
+    <h4 style="margin-top:0;margin-bottom:10px;font-size:0.9rem;color:#505b78;font-weight:800">🏆 Klasemen Semua Pemain:</h4>
+    <div id="scoresMobile" class="scores-container" style="max-height:180px"></div>
+  </div>
+</section>
+
+<!-- MODAL SOAL DI HP -->
+<div class="modal-backdrop" id="qModal">
+ <div class="modal" id="qContent"></div>
+</div>
+
+<!-- MODAL GAMEOVER PODIUM WINNERS -->
+<div class="modal-backdrop" id="gameOverModal">
+ <div class="modal" style="text-align:center; max-width:600px;">
+  <span class="eyebrow" style="background:#fff3c4; color:#b58100; margin-bottom:8px">👑 PERMAINAN SELESAI</span>
+  <h2 style="margin:4px 0 10px 0; font-weight:900; font-size:1.8rem; color:var(--purple)">Pemenang Misi SOS!</h2>
+  <p style="color:#667; font-size:0.85rem; margin-bottom:15px">Selamat kepada para juara dengan skor tertinggi!</p>
+
+  <div class="podium-stage" id="podiumStage"></div>
+
+  <h4 style="margin:15px 0 8px 0; text-align:left; font-size:0.9rem; color:#505b78">📋 Daftar Klasemen Akhir:</h4>
+  <div id="finalScoreList" class="scores-container" style="max-height:160px;"></div>
+
+  <button class="primary" style="margin-top:20px" onclick="location.reload()">🎮 Main Lagi / Kembali</button>
+ </div>
+</div>
+
+<!-- FIREBASE SDKs & LOGIKA GAME -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, update, get, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// KONFIGURASI FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyBZfc_1mnNZHzrXSbloyKlr1iA8a3Q4r_s",
+  authDomain: "sos-matematika.firebaseapp.com",
+  databaseURL: "https://sos-matematika-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "sos-matematika",
+  storageBucket: "sos-matematika.firebasestorage.app",
+  messagingSenderId: "667455318767",
+  appId: "1:667455318767:web:66d5714300a4ed1a97091a",
+  measurementId: "G-4XELD9KJ43"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* ----------------------------------------------------
+   GENERATOR WARNA DINAMIS UNIK PER PEMAIN
+---------------------------------------------------- */
+function generateDistinctColor(index) {
+  const goldenRatio = 0.618033988749895;
+  const hue = Math.floor(((index * goldenRatio) % 1) * 360);
+  return `hsl(${hue}, 85%, 48%)`;
+}
+
+function sanitizeKey(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, '_');
+}
+
+/* ----------------------------------------------------
+   AUDIO MANAGEMENT (FILE MP3 BGM + ADAPTIVE TEMPO)
+---------------------------------------------------- */
+const bgmPlayer = document.getElementById('bgmPlayer');
+let bgmPlaying = false;
+let audioCtx = null;
+let isPausedState = false;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+function toggleBgm() {
+  initAudio();
+  const btn = document.getElementById('bgmToggle');
+  if (bgmPlaying) {
+    bgmPlayer.pause();
+    btn.textContent = "🎵 Musik: OFF";
+    btn.style.background = "#eee9ff";
+    btn.style.color = "var(--purple)";
+    bgmPlaying = false;
+  } else {
+    bgmPlayer.play().then(() => {
+      btn.textContent = "🔊 Musik: ON";
+      btn.style.background = "var(--purple)";
+      btn.style.color = "white";
+      bgmPlaying = true;
+    }).catch(e => {
+      console.log("Audio Play Error:", e);
+      alert("Klik layar permainan terlebih dahulu untuk mengizinkan audio terputar.");
+    });
+  }
+}
+
+function updateBgmTension(remainingRatio) {
+  if (!bgmPlayer) return;
+  const speed = 1.0 + ((1.0 - remainingRatio) * 0.45);
+  bgmPlayer.playbackRate = speed;
+}
+
+function playCorrectSfx() {
+  initAudio();
+  if(!audioCtx) return;
+  const now = audioCtx.currentTime;
+  [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+    gain.gain.setValueAtTime(0.12, now + idx * 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 0.3);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now + idx * 0.08);
+    osc.stop(now + idx * 0.08 + 0.3);
+  });
+}
+
+function playVictorySfx() {
+  initAudio();
+  if(!audioCtx) return;
+  const now = audioCtx.currentTime;
+  [440, 554.37, 659.25, 880, 1108.73].forEach((freq, idx) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+    gain.gain.setValueAtTime(0.2, now + idx * 0.09);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.09 + 0.6);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now + idx * 0.09);
+    osc.stop(now + idx * 0.09 + 0.6);
+  });
+}
+
+function playGameOverFanfare() {
+  initAudio();
+  if(!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const notes = [523.25, 523.25, 523.25, 659.25, 783.99, 1046.50];
+  const durations = [0.12, 0.12, 0.12, 0.25, 0.25, 0.7];
+  let time = now;
+
+  notes.forEach((freq, idx) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(freq, time);
+    gain.gain.setValueAtTime(0.15, time);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + durations[idx]);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(time);
+    osc.stop(time + durations[idx]);
+    time += durations[idx] + 0.03;
+  });
+}
+
+function playWrongSfx() {
+  initAudio();
+  if(!audioCtx) return;
+  const now = audioCtx.currentTime;
+  [180, 140].forEach((freq, idx) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+    gain.gain.setValueAtTime(0.12, now + idx * 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.2);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now + idx * 0.15);
+    osc.stop(now + idx * 0.15 + 0.2);
+  });
+}
+
+// BANK SOAL LINGKARAN (LENGKAP 81 SOAL UNIK)
+const masterQuestions = [
+{q:'Pusat = 80° → Keliling?',a:['40','40°']},
+{q:'Keliling = 35° → Pusat?',a:['70','70°']},
+{q:'Pusat = 120° → Keliling?',a:['60','60°']},
+{q:'Keliling = 42° → Pusat?',a:['84','84°']},
+{q:'Pusat = 90° → Keliling?',a:['45','45°']},
+{q:'Keliling = 25° → Pusat?',a:['50','50°']},
+{q:'Pusat = 150° → Keliling?',a:['75','75°']},
+{q:'Keliling = 38° → Pusat?',a:['76','76°']},
+{q:'Pusat = 64° → Keliling?',a:['32','32°']},
+{q:'Keliling = 55° → Pusat?',a:['110','110°']},
+{q:'Pusat = 100° → Keliling?',a:['50','50°']},
+{q:'Keliling = 30° → Pusat?',a:['60','60°']},
+{q:'Pusat = 136° → Keliling?',a:['68','68°']},
+{q:'Keliling = 47° → Pusat?',a:['94','94°']},
+{q:'Pusat = 72° → Keliling?',a:['36','36°']},
+{q:'Keliling = 62° → Pusat?',a:['124','124°']},
+{q:'Pusat = 100° → Keliling?',a:['50','50°'],diagram:'angle'},
+{q:'Keliling = 40° → Pusat?',a:['80','80°'],diagram:'angle'},
+{q:'r = 7 cm → Diameter (d)?',a:['14','14cm','14 cm'],diagram:'radius'},
+{q:'d = 18 cm → Jari-jari (r)?',a:['9','9cm','9 cm']},
+{q:'r = 12 cm → Diameter (d)?',a:['24','24cm','24 cm']},
+{q:'d = 30 cm → Jari-jari (r)?',a:['15','15cm','15 cm']},
+{q:'d = 20 cm → Jari-jari (r)?',a:['10','10cm','10 cm'],diagram:'radius'},
+{q:'r = 5,5 cm → Diameter (d)?',a:['11','11cm','11 cm']},
+{q:'d = 16 cm → Jari-jari (r)?',a:['8','8cm','8 cm']},
+{q:'r = 9 cm → Diameter (d)?',a:['18','18cm','18 cm']},
+{q:'d = 25 cm → Jari-jari (r)?',a:['12.5','12,5','12.5cm']},
+{q:'r = 15 cm → Diameter (d)?',a:['30','30cm','30 cm']},
+{q:'r = 6 cm → Diameter (d)?',a:['12','12cm','12 cm'],diagram:'radius'},
+{q:'d = 42 cm → Jari-jari (r)?',a:['21','21cm','21 cm']},
+{q:'r = 3,5 cm → Diameter (d)?',a:['7','7cm','7 cm']},
+{q:'d = 50 cm → Jari-jari (r)?',a:['25','25cm','25 cm']},
+{q:'d = 24 cm → Jari-jari (r)?',a:['12','12cm','12 cm'],diagram:'radius'},
+{q:'Pusat = 110° → Keliling?',a:['55','55°']},
+{q:'Keliling = 28° → Pusat?',a:['56','56°']},
+{q:'Pusat = 144° → Keliling?',a:['72','72°']},
+{q:'Pusat = 160° → Keliling?',a:['80','80°']},
+{q:'Keliling = 45° → Pusat?',a:['90','90°']},
+{q:'r = 14 cm → Diameter (d)?',a:['28','28cm','28 cm']},
+{q:'d = 36 cm → Jari-jari (r)?',a:['18','18cm','18 cm']},
+{q:'Pusat = 50° → Keliling?',a:['25','25°']},
+{q:'Keliling = 65° → Pusat?',a:['130','130°']},
+{q:'r = 8,5 cm → Diameter (d)?',a:['17','17cm','17 cm']},
+{q:'d = 22 cm → Jari-jari (r)?',a:['11','11cm','11 cm']},
+{q:'Pusat = 130° → Keliling?',a:['65','65°']},
+{q:'Keliling = 15° → Pusat?',a:['30','30°']},
+{q:'r = 10 cm → Diameter (d)?',a:['20','20cm','20 cm']},
+{q:'d = 28 cm → Jari-jari (r)?',a:['14','14cm','14 cm']},
+{q:'Pusat = 170° → Keliling?',a:['85','85°']},
+{q:'Keliling = 50° → Pusat?',a:['100','100°']},
+{q:'r = 4.5 cm → Diameter (d)?',a:['9','9cm','9 cm']},
+{q:'d = 40 cm → Jari-jari (r)?',a:['20','20cm','20 cm']},
+{q:'Pusat = 76° → Keliling?',a:['38','38°']},
+{q:'Keliling = 33° → Pusat?',a:['66','66°']},
+{q:'r = 13 cm → Diameter (d)?',a:['26','26cm','26 cm']},
+{q:'d = 32 cm → Jari-jari (r)?',a:['16','16cm','16 cm']},
+{q:'Pusat = 96° → Keliling?',a:['48','48°']},
+{q:'Keliling = 52° → Pusat?',a:['104','104°']},
+{q:'r = 16 cm → Diameter (d)?',a:['32','32cm','32 cm']},
+{q:'d = 48 cm → Jari-jari (r)?',a:['24','24cm','24 cm']},
+{q:'Pusat = 108° → Keliling?',a:['54','54°']},
+{q:'Keliling = 70° → Pusat?',a:['140','140°']},
+{q:'r = 2,5 cm → Diameter (d)?',a:['5','5cm','5 cm']},
+{q:'d = 60 cm → Jari-jari (r)?',a:['30','30cm','30 cm']},
+{q:'Pusat = 86° → Keliling?',a:['43','43°']},
+{q:'Keliling = 49° → Pusat?',a:['98','98°']},
+{q:'r = 17 cm → Diameter (d)?',a:['34','34cm','34 cm']},
+{q:'d = 52 cm → Jari-jari (r)?',a:['26','26cm','26 cm']},
+{q:'Pusat = 118° → Keliling?',a:['59','59°']},
+{q:'Keliling = 36° → Pusat?',a:['72','72°']},
+{q:'r = 6,5 cm → Diameter (d)?',a:['13','13cm','13 cm']},
+{q:'d = 34 cm → Jari-jari (r)?',a:['17','17cm','17 cm']},
+{q:'Pusat = 154° → Keliling?',a:['77','77°']},
+{q:'Keliling = 58° → Pusat?',a:['116','116°']},
+{q:'r = 18 cm → Diameter (d)?',a:['36','36cm','36 cm']},
+{q:'d = 56 cm → Jari-jari (r)?',a:['28','28cm','28 cm']},
+{q:'Pusat = 126° → Keliling?',a:['63','63°']},
+{q:'Keliling = 61° → Pusat?',a:['122','122°']},
+{q:'r = 7,5 cm → Diameter (d)?',a:['15','15cm','15 cm']},
+{q:'d = 64 cm → Jari-jari (r)?',a:['32','32cm','32 cm']},
+{q:'Pusat = 138° → Keliling?',a:['69','69°']}
+];
+
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+let activeQuestions = [];
+let currentRoom = null;
+let myPlayerId = null;
+let myPlayerName = '';
+let isHost = false;
+let previousSosLines = [];
+let boardRows = 6;
+let boardCols = 6;
+let isGameOverTriggered = false;
+
+function getDiagramSvg(type){
+  if(type === 'angle'){
+    return `<div class="diagram"><svg viewBox="0 0 300 170"><circle cx="150" cy="87" r="63" fill="#fff" stroke="#7b68ee" stroke-width="3"/><circle cx="150" cy="87" r="3.5" fill="#203052"/><path d="M150 87 L100 49 M150 87 L211 75 M100 49 Q95 115 150 150" fill="none" stroke="#ff5f9e" stroke-width="3"/><path d="M150 87 L150 150" stroke="#319de8" stroke-width="2" stroke-dasharray="4 4"/><text x="157" y="83" font-size="12" font-weight="bold">O</text><text x="87" y="45" font-size="12" font-weight="bold">A</text><text x="216" y="76" font-size="12" font-weight="bold">B</text><text x="151" y="164" font-size="12" font-weight="bold">C</text></svg></div>`;
+  }
+  if(type === 'radius'){
+    return `<div class="diagram"><svg viewBox="0 0 300 170"><circle cx="150" cy="84" r="62" fill="#fff" stroke="#7b68ee" stroke-width="3"/><circle cx="150" cy="84" r="3.5" fill="#203052"/><line x1="150" y1="84" x2="212" y2="84" stroke="#ff5f9e" stroke-width="4"/><text x="155" y="75" font-size="12" font-weight="bold">O</text><text x="217" y="88" font-size="12" font-weight="bold">A</text></svg></div>`;
+  }
+  return '';
+}
+
+document.getElementById('bgmToggle').onclick = toggleBgm;
+
+// TOMBOL PAUSE PERMAINAN OLEH HOST
+document.getElementById('pauseGameBtn').onclick = () => {
+  if (!currentRoom || !isHost) return;
+  const newStatus = !isPausedState;
+  update(ref(db, `rooms/${currentRoom}`), { isPaused: newStatus });
+};
+
+document.getElementById('backToLobbyBtn').onclick = () => {
+  if (confirm("Apakah Anda yakin ingin kembali ke halaman utama? Permainan akan dihentikan.")) {
+    if (bgmPlayer) bgmPlayer.pause();
+    location.reload();
+  }
+};
+
+// 1. CREATE ROOM (HOST SERVER DENGAN UKURAN KOTAK PILIHAN)
+document.getElementById('hostBtn').onclick = () => {
+  initAudio();
+  isHost = true;
+  currentRoom = Math.floor(100000 + Math.random() * 900000).toString();
+  document.getElementById('roomDisplay').textContent = currentRoom;
+
+  const bSize = document.getElementById('boardSizeSelect').value;
+  if (bSize === '6x9') { boardRows = 6; boardCols = 9; }
+  else if (bSize === '9x9') { boardRows = 9; boardCols = 9; }
+  else { boardRows = 6; boardCols = 6; }
+
+  const totalCells = boardRows * boardCols;
+  const shuffledQuestions = shuffleArray(masterQuestions).slice(0, totalCells);
+
+  set(ref(db, 'rooms/' + currentRoom), {
+    board: Array(totalCells).fill({letter:'', owner:'', color:''}),
+    questions: shuffledQuestions,
+    rows: boardRows,
+    cols: boardCols,
+    players: {},
+    sosLines: [],
+    isPaused: false,
+    status: 'playing'
+  });
+
+  listenToRoom();
+  document.getElementById('start').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  window.addEventListener('resize', () => {
+    autoFitCellText();
+    drawAllSosLines();
+  });
+};
+
+// 2. JOIN GAME (PEMAIN HP) DENGAN DUKUNGAN RE-JOIN KEMBALI
+document.getElementById('joinBtn').onclick = () => {
+  initAudio();
+  const code = document.getElementById('joinRoomCode').value.trim();
+  const name = document.getElementById('playerName').value.trim();
+  if(!code || !name){ alert("Isi Kode Room dan Nama Anda!"); return; }
+
+  currentRoom = code;
+  myPlayerName = name;
+  myPlayerId = 'p_' + sanitizeKey(name); // Key konsisten untuk mendukung re-join
+
+  const roomRef = ref(db, `rooms/${code}`);
+  get(roomRef).then((snapshot) => {
+    if (!snapshot.exists()) {
+      alert("Kode Room tidak ditemukan!");
+      return;
+    }
+
+    const roomData = snapshot.val();
+    const existingPlayer = roomData.players && roomData.players[myPlayerId];
+
+    if (existingPlayer) {
+      showSosToast(`👋 Selamat Datang Kembali, ${name}! Poin sebelumnya: ${existingPlayer.score}`);
+    } else {
+      const existingPlayers = roomData.players || {};
+      const playerCount = Object.keys(existingPlayers).length;
+      const assignedColor = generateDistinctColor(playerCount);
+
+      set(ref(db, `rooms/${code}/players/${myPlayerId}`), {
+        name: name,
+        score: 0,
+        color: assignedColor
+      });
+    }
+
+    listenToRoom();
+    document.getElementById('start').style.display = 'none';
+    document.getElementById('mobileView').style.display = 'block';
+    document.getElementById('mPlayerName').textContent = name;
+    window.addEventListener('resize', drawAllSosLines);
+  });
+};
+
+// 3. REALTIME SYNC
+function listenToRoom(){
+  onValue(ref(db, 'rooms/' + currentRoom), (snapshot) => {
+    const data = snapshot.val();
+    if(!data) return;
+
+    boardRows = data.rows || 6;
+    boardCols = data.cols || 6;
+    isPausedState = !!data.isPaused;
+
+    if(data.questions){
+      activeQuestions = data.questions;
+    }
+
+    // HANDLER TAMPILAN PAUSE
+    const pauseBtn = document.getElementById('pauseGameBtn');
+    const hostBanner = document.getElementById('hostPauseBanner');
+    const mobileBanner = document.getElementById('mobilePauseBanner');
+    const mSub = document.getElementById('mStatusSub');
+
+    if (isPausedState) {
+      if (pauseBtn) { pauseBtn.textContent = "▶️ Lanjutkan"; pauseBtn.style.background = "#4bd8b0"; pauseBtn.style.color = "#fff"; }
+      if (hostBanner) hostBanner.style.display = "flex";
+      if (mobileBanner) mobileBanner.style.display = "block";
+      if (mSub) mSub.textContent = "⏸️ Permainan sedang dipause";
+      
+      // Tutup modal soal jika siswa sedang buka saat dipause
+      const qModal = document.getElementById('qModal');
+      if (qModal && qModal.style.display === 'flex') {
+        qModal.style.display = 'none';
+        showSosToast("⏸️ Guru menghentikan permainan sementara!");
+      }
+    } else {
+      if (pauseBtn) { pauseBtn.textContent = "⏸️ Pause"; pauseBtn.style.background = "#fff3c4"; pauseBtn.style.color = "#9e7600"; }
+      if (hostBanner) hostBanner.style.display = "none";
+      if (mobileBanner) mobileBanner.style.display = "none";
+      if (mSub) mSub.textContent = "Pilih kotak aktif untuk menjawab";
+    }
+
+    renderScoresUI(data.players);
+
+    if(isHost){
+      renderBoardUI(data.board);
+    } else {
+      renderMobileController(data.board);
+    }
+
+    if(data.sosLines){
+      if(data.sosLines.length > previousSosLines.length){
+        playVictorySfx();
+      }
+      previousSosLines = data.sosLines;
+      drawAllSosLines();
+    }
+
+    // HITUNG REMAINING SOAL & UPDATE TEMPO BGM
+    const filledCount = data.board ? data.board.filter(c => c.letter).length : 0;
+    const totalCells = boardRows * boardCols;
+    const remainingRatio = Math.max(0, (totalCells - filledCount) / totalCells);
+    updateBgmTension(remainingRatio);
+
+    // DETEKSI GAME OVER APABILA SEMUA KOTAK TERISI
+    if (filledCount === totalCells && !isGameOverTriggered) {
+      isGameOverTriggered = true;
+      triggerGameOverModal(data.players);
+    }
+  });
+}
+
+function autoFitCellText() {
+  const topics = document.querySelectorAll('.cell .topic');
+  topics.forEach(el => {
+    let fontSize = 24;
+    el.style.fontSize = fontSize + 'px';
+    const parent = el.parentElement;
+    
+    while ((el.scrollHeight > parent.clientHeight - 10 || el.scrollWidth > parent.clientWidth - 6) && fontSize > 8) {
+      fontSize -= 0.5;
+      el.style.fontSize = fontSize + 'px';
+    }
+  });
+}
+
+function renderBoardUI(board){
+  const b = document.getElementById('board');
+  b.className = `board board-${boardRows}x${boardCols}`;
+  b.style.gridTemplateColumns = `repeat(${boardCols}, 1fr)`;
+  b.style.gridTemplateRows = `repeat(${boardRows}, 1fr)`;
+  b.innerHTML = '';
+  let used = 0;
+
+  board.forEach((cell, i) => {
+    const el = document.createElement('div');
+    el.className = 'cell' + (cell.letter ? ' used' : '');
+    el.dataset.index = i;
+    if(cell.letter){
+      used++;
+      el.style.setProperty('--owner-color', cell.color);
+      el.innerHTML = `
+        <span class="num">${i+1}</span>
+        <span class="state" style="color:${cell.color}">${cell.letter}</span>
+        <span class="owner-tag">${cell.owner}</span>
+      `;
+    } else {
+      const qText = activeQuestions[i] ? activeQuestions[i].q : '';
+      el.innerHTML = `
+        <span class="num">${i+1}</span>
+        <div class="topic">${qText}</div>
+      `;
+    }
+    b.appendChild(el);
+  });
+  document.getElementById('boardTitleDisplay').textContent = `Papan Tantangan ${boardRows} × ${boardCols}`;
+  document.getElementById('remCount').textContent = (board.length - used) + ' Soal Tersisa';
+
+  setTimeout(autoFitCellText, 20);
+}
+
+function renderScoresUI(players){
+  const divHost = document.getElementById('scoresHost');
+  const divMobile = document.getElementById('scoresMobile');
+  if(!players) return;
+
+  const sorted = Object.values(players).sort((a,b) => b.score - a.score);
+
+  const html = sorted.map(p => `
+    <div class="score-row">
+      <div class="swatch" style="background:${p.color}"></div>
+      <div style="font-weight:bold;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</div>
+      <div style="font-weight:900;font-size:1rem;color:var(--purple)">${p.score} <span style="font-size:0.7rem;color:#889">pts</span></div>
+    </div>
+  `).join('');
+
+  if(divHost) divHost.innerHTML = html;
+  if(divMobile) divMobile.innerHTML = html;
+
+  if(!isHost && players[myPlayerId]){
+    document.getElementById('mScore').textContent = players[myPlayerId].score + ' Pts';
+  }
+}
+
+// DETEKSI S-O-S DINAMIS SESUAI BOARD SIZE
+function checkSosLines(board) {
+  const lines = [];
+  const getCell = (r, c) => {
+    if (r < 0 || r >= boardRows || c < 0 || c >= boardCols) return null;
+    const idx = r * boardCols + c;
+    return { idx: idx, letter: board[idx] ? board[idx].letter : '', color: board[idx] ? board[idx].color : '' };
+  };
+
+  const directions = [
+    { dr: 0, dc: 1 },  // Horizontal
+    { dr: 1, dc: 0 },  // Vertikal
+    { dr: 1, dc: 1 },  // Diagonal Kanan-Bawah
+    { dr: 1, dc: -1 }  // Diagonal Kiri-Bawah
+  ];
+
+  for (let r = 0; r < boardRows; r++) {
+    for (let c = 0; c < boardCols; c++) {
+      const cell1 = getCell(r, c);
+      if (!cell1 || cell1.letter !== 'S') continue;
+
+      directions.forEach(({ dr, dc }) => {
+        const cell2 = getCell(r + dr, c + dc);
+        const cell3 = getCell(r + dr * 2, c + dc * 2);
+
+        if (cell2 && cell3 && cell2.letter === 'O' && cell3.letter === 'S') {
+          const key = [cell1.idx, cell2.idx, cell3.idx].sort((a,b)=>a-b).join('-');
+          lines.push({
+            key,
+            indices: [cell1.idx, cell2.idx, cell3.idx],
+            color: cell2.color || '#ff5f9e'
+          });
+        }
+      });
+    }
+  }
+  return lines;
+}
+
+function drawAllSosLines() {
+  const targetSvgId = isHost ? 'sosSvgCanvasHost' : 'sosSvgCanvasMobile';
+  const targetBoardId = isHost ? 'board' : 'mCellSelect';
+
+  const svg = document.getElementById(targetSvgId);
+  const boardEl = document.getElementById(targetBoardId);
+  if(!svg || !boardEl) return;
+
+  const rect = boardEl.getBoundingClientRect();
+  svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+  svg.innerHTML = '';
+
+  previousSosLines.forEach(line => {
+    const cells = line.indices.map(idx => {
+      const el = boardEl.querySelector(`[data-index="${idx}"]`);
+      if(!el) return null;
+      const cRect = el.getBoundingClientRect();
+      return {
+        x: cRect.left - rect.left + cRect.width / 2,
+        y: cRect.top - rect.top + cRect.height / 2
+      };
+    });
+
+    if(cells[0] && cells[2]){
+      const lineEl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      lineEl.setAttribute('x1', cells[0].x);
+      lineEl.setAttribute('y1', cells[0].y);
+      lineEl.setAttribute('x2', cells[2].x);
+      lineEl.setAttribute('y2', cells[2].y);
+      lineEl.setAttribute('stroke', line.color || '#ff5f9e');
+      lineEl.setAttribute('stroke-width', isHost ? '6' : '4');
+      lineEl.setAttribute('stroke-linecap', 'round');
+      lineEl.setAttribute('class', 'sos-line');
+      svg.appendChild(lineEl);
+    }
+  });
+}
+
+function showSosToast(msg) {
+  const toast = document.getElementById('sosToast');
+  document.getElementById('toastMsg').textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+// 4. MOBILE CONTROLLER
+function renderMobileController(board){
+  const container = document.getElementById('mCellSelect');
+  container.style.gridTemplateColumns = `repeat(${boardCols}, 1fr)`;
+  container.innerHTML = '';
+
+  board.forEach((cell, idx) => {
+    const btn = document.createElement('button');
+    btn.dataset.index = idx;
+    if(cell.letter){
+      btn.className = 'm-cell done';
+      btn.textContent = cell.letter;
+      btn.style.setProperty('--owner-color', cell.color || '#6749d6');
+      btn.disabled = true;
+    } else {
+      btn.className = 'm-cell';
+      btn.textContent = idx + 1;
+      btn.disabled = isPausedState; // Kunci tombol kotak jika dipause
+      btn.onclick = () => openQuestionModal(idx, board);
+    }
+    container.appendChild(btn);
+  });
+
+  setTimeout(drawAllSosLines, 50);
+}
+
+function openQuestionModal(idx, board){
+  if (isPausedState) {
+    alert("Permainan sedang diberhentikan sementara oleh guru.");
+    return;
+  }
+  if(board[idx] && board[idx].letter){
+    alert("Maaf, kotak ini sudah dijawab oleh pemain lain!");
+    return;
+  }
+
+  const q = activeQuestions[idx];
+  const modal = document.getElementById('qContent');
+  document.getElementById('qModal').style.display = 'flex';
+
+  modal.innerHTML = `
+    <div style="font-weight:bold;color:var(--purple);font-size:0.85rem">KOTAK NO. ${idx + 1}</div>
+    <h3 style="margin:8px 0">${q.q}</h3>
+    ${q.diagram ? getDiagramSvg(q.diagram) : ''}
+    <input id="ansInput" placeholder="Ketik Jawaban Anda..." autocomplete="off">
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="primary" id="checkAnsBtn">Kirim Jawaban ✓</button>
+      <button class="secondary" style="margin:0" onclick="document.getElementById('qModal').style.display='none'">Tutup</button>
+    </div>
+    <div id="ansFeedback" style="margin-top:10px;font-weight:bold;text-align:center"></div>
+  `;
+
+  document.getElementById('checkAnsBtn').onclick = () => {
+    const userAns = document.getElementById('ansInput').value.trim().toLowerCase();
+    if(q.a.some(ans => ans.toLowerCase() === userAns)){
+      playCorrectSfx();
+      modal.innerHTML = `
+        <h2 style="color:var(--mint);margin:0">✨ Jawaban Benar! (+10 Poin)</h2>
+        <p>Pilih huruf untuk diletakkan pada Kotak No. ${idx + 1}:</p>
+        <div style="display:flex;gap:15px;margin-top:15px">
+          <button class="letter-choice s" id="pickS">S</button>
+          <button class="letter-choice o" id="pickO">O</button>
+        </div>
+      `;
+      document.getElementById('pickS').onclick = () => submitAnswerAndLetter(idx, 'S', board);
+      document.getElementById('pickO').onclick = () => submitAnswerAndLetter(idx, 'O', board);
+    } else {
+      playWrongSfx();
+      const fb = document.getElementById('ansFeedback');
+      fb.textContent = '❌ Jawaban belum tepat! Coba lagi.';
+      fb.style.color = 'var(--pink)';
+    }
+  };
+}
+
+// FUNGSI UTAMA DIPERBAIKI SANGAT CEPAT DENGAN RUNTRANSACTION (ATOMIC TRANSACTION)
+async function submitAnswerAndLetter(idx, letter, currentBoard) {
+  document.getElementById('qModal').style.display = 'none';
+
+  const roomRef = ref(db, `rooms/${currentRoom}`);
+  let formedSos = false;
+  let playerName = myPlayerName;
+  let earnedPoints = 10;
+
+  try {
+    await runTransaction(roomRef, (roomData) => {
+      if (!roomData) return roomData;
+
+      if (roomData.isPaused) {
+        return; // Batal jika dipause
+      }
+
+      if (!roomData.board) roomData.board = [];
+
+      // Mencegah kondisi balapan (race condition) jika dua orang menjawab kotak sama sekaligus
+      if (roomData.board[idx] && roomData.board[idx].letter) {
+        return; // Batal jika kotak sudah diisi
+      }
+
+      const myPlayer = roomData.players ? roomData.players[myPlayerId] : null;
+      if (!myPlayer) return roomData;
+
+      // Update isi kotak
+      roomData.board[idx] = {
+        letter: letter,
+        owner: myPlayerName,
+        color: myPlayer.color
+      };
+
+      // Hitung Garis SOS
+      const existingLines = roomData.sosLines || [];
+      const currentLines = checkSosLines(roomData.board);
+      const existingKeys = new Set(existingLines.map(l => l.key));
+      const newLines = currentLines.filter(l => !existingKeys.has(l.key));
+
+      let bonusPoints = newLines.length * 5;
+      earnedPoints = 10 + bonusPoints;
+
+      // Update skor pemain & garis SOS secara bersamaan di server
+      roomData.players[myPlayerId].score = (roomData.players[myPlayerId].score || 0) + earnedPoints;
+      roomData.sosLines = [...existingLines, ...newLines];
+
+      if (newLines.length > 0) {
+        formedSos = true;
+      }
+
+      return roomData;
+    });
+
+    if (formedSos) {
+      playVictorySfx();
+      showSosToast(`🎉 ${playerName.toUpperCase()} MEMBENTUK S-O-S! (+${earnedPoints} PTS)`);
+    }
+
+  } catch (error) {
+    console.error("Gagal memproses transaksi:", error);
+  }
+}
+
+// 5. GAMEOVER PODIUM WINNERS & CONFETTI POPUP
+function triggerGameOverModal(players) {
+  if (bgmPlayer) bgmPlayer.pause();
+  playGameOverFanfare();
+
+  if (typeof confetti === 'function') {
+    confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+    setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0 } }), 300);
+    setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1 } }), 600);
+  }
+
+  const sorted = Object.values(players || {}).sort((a,b) => b.score - a.score);
+  const p1 = sorted[0] || { name: '-', score: 0, color: '#ffd700' };
+  const p2 = sorted[1] || { name: '-', score: 0, color: '#c0c0c0' };
+  const p3 = sorted[2] || { name: '-', score: 0, color: '#cd7f32' };
+
+  const stage = document.getElementById('podiumStage');
+  stage.innerHTML = `
+    <!-- JUARA 2 -->
+    <div class="podium-box podium-2">
+      <div style="font-size:0.75rem; color:#fff; text-shadow:0 1px 2px #0004">JUARA 2</div>
+      <div style="font-size:0.95rem; margin:2px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%">${p2.name}</div>
+      <div style="font-size:1.1rem; font-weight:900; color:#fff">${p2.score} pts</div>
+    </div>
+
+    <!-- JUARA 1 -->
+    <div class="podium-box podium-1">
+      <div class="trophy-icon">🏆</div>
+      <div style="font-size:0.8rem; color:#fff; text-shadow:0 1px 2px #0004">JUARA 1</div>
+      <div style="font-size:1.1rem; margin:2px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%">${p1.name}</div>
+      <div style="font-size:1.3rem; font-weight:900; color:#fff">${p1.score} pts</div>
+    </div>
+
+    <!-- JUARA 3 -->
+    <div class="podium-box podium-3">
+      <div style="font-size:0.75rem; color:#fff; text-shadow:0 1px 2px #0004">JUARA 3</div>
+      <div style="font-size:0.95rem; margin:2px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%">${p3.name}</div>
+      <div style="font-size:1.1rem; font-weight:900; color:#fff">${p3.score} pts</div>
+    </div>
+  `;
+
+  const finalScoreList = document.getElementById('finalScoreList');
+  finalScoreList.innerHTML = sorted.map((p, idx) => `
+    <div class="score-row">
+      <div style="font-weight:900; font-size:0.85rem; color:#808ba0">#${idx+1}</div>
+      <div style="font-weight:bold; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${p.name}</div>
+      <div style="font-weight:900; font-size:1rem; color:var(--purple)">${p.score} <span style="font-size:0.7rem; color:#889">pts</span></div>
+    </div>
+  `).join('');
+
+  document.getElementById('gameOverModal').style.display = 'flex';
+}
+</script>
+</body>
+</html>
