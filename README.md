@@ -1,2 +1,0 @@
-# game-sos
-game sos
